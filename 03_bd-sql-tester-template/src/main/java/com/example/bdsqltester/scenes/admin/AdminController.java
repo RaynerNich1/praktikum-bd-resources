@@ -132,6 +132,8 @@ public class AdminController {
         answerKeyField.clear();
     }
 
+
+
     @FXML
     void onSaveClick(ActionEvent event) {
         // If id is set, update, else insert
@@ -178,7 +180,6 @@ public class AdminController {
 
     @FXML
     void onShowGradesClick(ActionEvent event) {
-        // Make sure id is set
         if (idField.getText().isEmpty()) {
             Alert alert = new Alert(Alert.AlertType.ERROR);
             alert.setTitle("Error");
@@ -187,7 +188,78 @@ public class AdminController {
             alert.showAndWait();
             return;
         }
+
+        long assignmentId = Long.parseLong(idField.getText());
+
+        TableView<ArrayList<String>> tableView = new TableView<>();
+        ObservableList<ArrayList<String>> data = FXCollections.observableArrayList();
+        ArrayList<String> headers = new ArrayList<>();
+
+        try (Connection conn = MainDataSource.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT u.username, g.grade FROM grades g JOIN users u ON g.user_id = u.id WHERE g.assignment_id = ?"
+             )) {
+            stmt.setLong(1, assignmentId);
+            ResultSet rs = stmt.executeQuery();
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
+
+            // Buat kolom header
+            for (int i = 1; i <= columnCount; i++) {
+                final int columnIndex = i - 1;
+                String headerText = metaData.getColumnLabel(i);
+                headers.add(headerText);
+
+                TableColumn<ArrayList<String>, String> column = new TableColumn<>(headerText);
+                column.setCellValueFactory(cellData -> {
+                    ArrayList<String> rowData = cellData.getValue();
+                    if (rowData != null && columnIndex < rowData.size()) {
+                        return new SimpleStringProperty(rowData.get(columnIndex));
+                    } else {
+                        return new SimpleStringProperty("");
+                    }
+                });
+                column.setPrefWidth(150);
+                tableView.getColumns().add(column);
+            }
+
+            // Tambahkan baris data
+            while (rs.next()) {
+                ArrayList<String> row = new ArrayList<>();
+                for (int i = 1; i <= columnCount; i++) {
+                    String value = rs.getString(i);
+                    row.add(value != null ? value : "");
+                }
+                data.add(row);
+            }
+
+            if (data.isEmpty()) {
+                Alert infoAlert = new Alert(Alert.AlertType.INFORMATION);
+                infoAlert.setTitle("No Grades");
+                infoAlert.setHeaderText(null);
+                infoAlert.setContentText("There are no grades submitted for this assignment yet.");
+                infoAlert.showAndWait();
+                return;
+            }
+
+            tableView.setItems(data);
+            StackPane root = new StackPane(tableView);
+            Scene scene = new Scene(root, 400, 300);
+            Stage stage = new Stage();
+            stage.setTitle("Grades for Assignment ID: " + assignmentId);
+            stage.setScene(scene);
+            stage.show();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+            errorAlert.setTitle("Database Error");
+            errorAlert.setHeaderText("Could not retrieve grades.");
+            errorAlert.setContentText(e.getMessage());
+            errorAlert.showAndWait();
+        }
     }
+
 
     @FXML
     void onTestButtonClick(ActionEvent event) {
@@ -285,6 +357,61 @@ public class AdminController {
             errorAlert.showAndWait();
         }
     } // End of onTestButtonClick method
+
+
+    @FXML
+    void onDeleteAssignmentClick(ActionEvent event) {
+        if (idField.getText().isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("No Assignment Selected");
+            alert.setContentText("Please select an assignment to delete.");
+            alert.showAndWait();
+            return;
+        }
+
+        long assignmentId = Long.parseLong(idField.getText());
+
+        // Confirm deletion
+        Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmationAlert.setTitle("Confirm Deletion");
+        confirmationAlert.setHeaderText("Are you sure you want to delete this assignment?");
+        confirmationAlert.setContentText("This action cannot be undone.");
+        confirmationAlert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                // Perform deletion
+                try (Connection conn = MainDataSource.getConnection()) {
+                    String deleteQuery = "DELETE FROM assignments WHERE id = ?";
+                    PreparedStatement stmt = conn.prepareStatement(deleteQuery);
+                    stmt.setLong(1, assignmentId);
+                    stmt.executeUpdate();
+
+                    // Refresh the assignment list
+                    refreshAssignmentList();
+
+                    // Clear the input fields
+                    idField.clear();
+                    nameField.clear();
+                    instructionsField.clear();
+                    answerKeyField.clear();
+
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("Success");
+                    successAlert.setHeaderText("Assignment Deleted");
+                    successAlert.setContentText("The assignment has been successfully deleted.");
+                    successAlert.showAndWait();
+
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                    errorAlert.setTitle("Database Error");
+                    errorAlert.setHeaderText("Failed to delete assignment");
+                    errorAlert.setContentText(e.getMessage());
+                    errorAlert.showAndWait();
+                }
+            }
+        });
+    }
 
 
 }

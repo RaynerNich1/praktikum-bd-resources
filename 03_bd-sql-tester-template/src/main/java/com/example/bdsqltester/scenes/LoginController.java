@@ -11,6 +11,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.Parent;
 
 import java.io.IOException;
 import java.sql.*;
@@ -25,6 +26,19 @@ public class LoginController {
 
     @FXML
     private TextField usernameField;
+
+    private int getUserIdByUsername(String username) throws SQLException {
+        try (Connection c = MainDataSource.getConnection()) {
+            PreparedStatement stmt = c.prepareStatement("SELECT id FROM users WHERE username = ?");
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        }
+        return -1; // ID tidak ditemukan
+    }
+
 
     boolean verifyCredentials(String username, String password, String role) throws SQLException {
         // Call the database to verify the credentials
@@ -83,9 +97,37 @@ public class LoginController {
                     Scene scene = new Scene(loader.load());
                     app.getPrimaryStage().setScene(scene);
                 } else {
+                    // Ambil userId dari database
+                    int userId = getUserIdByUsername(username);
+                    if (userId == -1) {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Login Error");
+                        alert.setHeaderText("User Not Found");
+                        alert.setContentText("Cannot find user ID in database.");
+                        alert.showAndWait();
+                        return;
+                    }
+
                     // Load the user view
-                    app.getHostServices().showDocument("user-view.fxml");
+                    app.getPrimaryStage().setTitle("User View");
+
+                    try {
+                        FXMLLoader loader = new FXMLLoader(HelloApplication.class.getResource("user-view.fxml"));
+                        Parent root = loader.load();
+
+                        UserController userController = loader.getController();
+                        userController.setUserId(userId);
+
+                        Scene scene = new Scene(root);
+                        app.getPrimaryStage().setScene(scene);
+                    } catch (Exception e) {
+                        e.printStackTrace(); // PENTING: ini akan print error yang kita butuhkan
+                    }
+
+
+
                 }
+
             } else {
                 // Show an error message
                 Alert alert = new Alert(Alert.AlertType.ERROR);
