@@ -24,7 +24,7 @@ public class UserController {
     @FXML private Label gradeLabel;
 
     Connection connection = MainDataSource.getConnection();
-    private int userId; // ini harus di-set dari login
+    private int userId;
 
     public UserController() throws SQLException {
     }
@@ -77,7 +77,7 @@ public class UserController {
         idField.setText(String.valueOf(selected.id));
         nameField.setText(selected.name);
         instructionsField.setText(selected.instructions);
-        answerKeyField.setText(selected.answerKey); // Jika ingin ditampilkan ke user, atau bisa disembunyikan
+        answerKeyField.setText(selected.answerKey);
         loadUserGrade((int) selected.id);
     }
 

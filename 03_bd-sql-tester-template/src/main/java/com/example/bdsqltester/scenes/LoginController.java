@@ -36,7 +36,7 @@ public class LoginController {
                 return rs.getInt("id");
             }
         }
-        return -1; // ID tidak ditemukan
+        return -1;
     }
 
 
@@ -97,7 +97,6 @@ public class LoginController {
                     Scene scene = new Scene(loader.load());
                     app.getPrimaryStage().setScene(scene);
                 } else {
-                    // Ambil userId dari database
                     int userId = getUserIdByUsername(username);
                     if (userId == -1) {
                         Alert alert = new Alert(Alert.AlertType.ERROR);
@@ -121,7 +120,7 @@ public class LoginController {
                         Scene scene = new Scene(root);
                         app.getPrimaryStage().setScene(scene);
                     } catch (Exception e) {
-                        e.printStackTrace(); // PENTING: ini akan print error yang kita butuhkan
+                        e.printStackTrace();
                     }
 
 

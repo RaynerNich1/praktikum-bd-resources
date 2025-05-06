@@ -204,7 +204,6 @@ public class AdminController {
             ResultSetMetaData metaData = rs.getMetaData();
             int columnCount = metaData.getColumnCount();
 
-            // Buat kolom header
             for (int i = 1; i <= columnCount; i++) {
                 final int columnIndex = i - 1;
                 String headerText = metaData.getColumnLabel(i);
@@ -223,7 +222,6 @@ public class AdminController {
                 tableView.getColumns().add(column);
             }
 
-            // Tambahkan baris data
             while (rs.next()) {
                 ArrayList<String> row = new ArrayList<>();
                 for (int i = 1; i <= columnCount; i++) {
@@ -372,24 +370,20 @@ public class AdminController {
 
         long assignmentId = Long.parseLong(idField.getText());
 
-        // Confirm deletion
         Alert confirmationAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmationAlert.setTitle("Confirm Deletion");
         confirmationAlert.setHeaderText("Are you sure you want to delete this assignment?");
         confirmationAlert.setContentText("This action cannot be undone.");
         confirmationAlert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                // Perform deletion
                 try (Connection conn = MainDataSource.getConnection()) {
                     String deleteQuery = "DELETE FROM assignments WHERE id = ?";
                     PreparedStatement stmt = conn.prepareStatement(deleteQuery);
                     stmt.setLong(1, assignmentId);
                     stmt.executeUpdate();
 
-                    // Refresh the assignment list
                     refreshAssignmentList();
 
-                    // Clear the input fields
                     idField.clear();
                     nameField.clear();
                     instructionsField.clear();
